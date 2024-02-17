@@ -7,7 +7,7 @@ import type {
     DockviewApi,
     IDockviewGroupPanel,
 } from 'dockview-core';
-import { render, type Component, h } from 'vue';
+import { render, type Component, h, reactive, getCurrentInstance, type VNode } from 'vue';
 
 export interface IWatermarkPanelProps {
     containerApi: DockviewApi;
@@ -17,8 +17,9 @@ export interface IWatermarkPanelProps {
 
 export class VueWatermarkPart implements IWatermarkRenderer {
     private _element: HTMLElement;
-    private part?: Component<IWatermarkPanelProps>;
-    private parameters: GroupPanelPartInitParameters | undefined;
+    private part?: VNode;
+
+    private props: any;
 
     get element(): HTMLElement {
         return this._element;
@@ -33,7 +34,7 @@ export class VueWatermarkPart implements IWatermarkRenderer {
     }
 
     init(parameters: WatermarkRendererInitParameters): void {
-        this.part = h(this.component, {
+        this.props = reactive({
             api: parameters.containerApi,
             containerApi: parameters.containerApi,
             close: () => {
@@ -41,7 +42,9 @@ export class VueWatermarkPart implements IWatermarkRenderer {
                     parameters.containerApi.removeGroup(parameters.group);
                 }
             },
-        });
+        })
+        this.part = h(this.component, this.props);
+        this.part.appContext = getCurrentInstance()?.appContext ?? null;
         render(h(this.part), this._element);
     }
 
@@ -49,12 +52,13 @@ export class VueWatermarkPart implements IWatermarkRenderer {
         // noop
     }
 
-    update(params: PanelUpdateEvent): void {
-        if (this.parameters) {
-            this.parameters.params = params.params;
-        }
+    update(event: PanelUpdateEvent): void {
+        if (!this.part) return;
 
-        // this.part?.update({ params: this.parameters?.params ?? {} })
+        this.props.params = event.params;
+        this.part.props = this.props;
+
+        render(this.part, this._element);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
@@ -71,6 +75,8 @@ export class VueWatermarkPart implements IWatermarkRenderer {
     }
 
     dispose(): void {
-        // this.part?.dispose()
+        if(this.part) {
+            render(null, this._element)
+        }
     }
 }

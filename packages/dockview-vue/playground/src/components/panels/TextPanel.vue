@@ -1,10 +1,8 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import type { IDockviewPanelProps } from '../../../../src/main';
 
 const props = defineProps<IDockviewPanelProps>();
-
-const api = ref(props.api);
 
 const counter = ref(0);
 </script>
@@ -21,7 +19,7 @@ const counter = ref(0);
     >
         Hello world
         <br />
-        {{ props.api.title }}
+        {{ counter % 2 === 1 ? props.api.title : props.containerApi.height }}
         <br />
         {{ counter }}
         <button @click="counter++">Increment</button>

@@ -4,12 +4,21 @@ import type {
     GroupPanelPartInitParameters,
 } from 'dockview-core';
 import type { IGroupPanelBaseProps } from '../types/panel';
-import { render, type Component, h } from 'vue';
+import {
+    render,
+    type Component,
+    h,
+    getCurrentInstance,
+    reactive,
+    type VNode,
+} from 'vue';
 
 export class VuePanelHeaderPart implements ITabRenderer {
     private _element: HTMLElement;
-    private part?: Component<IGroupPanelBaseProps>;
+    private part?: VNode;
     private elRef: any;
+
+    private props: any;
 
     get element(): HTMLElement {
         return this._element;
@@ -28,25 +37,23 @@ export class VuePanelHeaderPart implements ITabRenderer {
     }
 
     public init(parameters: GroupPanelPartInitParameters): void {
-        this.part = h(this.component, {
+        this.props = reactive({
             api: parameters.api,
             containerApi: parameters.containerApi,
             params: parameters.params,
         });
-        render(h(this.part), this._element);
+        this.part = h(this.component, this.props);
+        this.part.appContext = getCurrentInstance()?.appContext ?? null;
+        render(this.part, this._element);
     }
 
     public update(event: PanelUpdateEvent): void {
-        if(!this.part) return
-        // this.part?.update(event.params)
+        if (!this.part) return;
 
-        // this.part = h(this.component, {
-        //   api: event.params.api,
-        //   containerApi: event.params.containerApi,
-        //   params: event.params.params
-        // })
-        render(h(this.part), this._element);
-        // console.log('HEADER UPDATE EVENT', event)
+        this.props.params = event.params;
+        this.part.props = this.props;
+
+        render(this.part, this._element);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
@@ -55,6 +62,9 @@ export class VuePanelHeaderPart implements ITabRenderer {
     }
 
     public dispose(): void {
-        // this.part?.dispose()
+        if (this.part) {
+            // This will unmount the component
+            render(null, this._element);
+        }
     }
 }

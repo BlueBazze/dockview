@@ -7,15 +7,21 @@ import {
     type IContentRenderer,
     type PanelUpdateEvent,
 } from 'dockview-core';
-import { type VNode, render, type Component, h } from 'vue';
+import {
+    type VNode,
+    render,
+    type Component,
+    h,
+    reactive,
+    getCurrentInstance,
+} from 'vue';
 import type { IDockviewPanelProps } from '../types/panel';
 
 export class VuePanelContentPart implements IContentRenderer {
     private _element: HTMLElement;
     private part?: VNode; // globalThis.Component<IDockviewPanelProps>
 
-    private _api: DockviewPanelApi | undefined;
-    private _containerApi: DockviewApi | undefined;
+    private props: any;
 
     private readonly _onDidFocus = new DockviewEmitter<void>();
     readonly onDidFocus: DockviewEvent<void> = this._onDidFocus.event;
@@ -40,40 +46,25 @@ export class VuePanelContentPart implements IContentRenderer {
     }
 
     public init(parameters: GroupPanelContentPartInitParameters): void {
-        this._api = parameters.api;
-        this._containerApi = parameters.containerApi;
-
-        this.part = h(this.component, {
+        this.props = reactive({
             api: parameters.api,
             containerApi: parameters.containerApi,
             params: parameters.params,
         });
+        this.part = h(this.component, this.props);
+        this.part.appContext = getCurrentInstance()?.appContext ?? null;
         render(h(this.part), this._element);
-        // this.part = new ReactPart(
-        //     this.element,
-        //     this.component,
-        //     {
-        //         params: parameters.params,
-        //         api: parameters.api,
-        //         containerApi: parameters.containerApi,
-        //     }
-        // );
     }
 
     public update(event: PanelUpdateEvent) {
-        if (!this.part || !this._api || !this._containerApi) {
-            this.dispose();
+        if (!this.part) {
             return;
         }
-        // this.part? //.update(event.params)
-        if (this.part?.props?.params) this.part.props.params = event.params;
-        // event
-        this.part = h(this.component, {
-            api: this._api,
-            containerApi: this._containerApi,
-            params: event.params,
-        });
-        render(h(this.part), this._element);
+
+        this.props.params = event.params;
+        this.part.props = this.props;
+
+        render(this.part, this._element);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
@@ -82,6 +73,9 @@ export class VuePanelContentPart implements IContentRenderer {
     public dispose(): void {
         this._onDidFocus.dispose();
         this._onDidBlur.dispose();
-        // this.part?.dispose()
+
+        if (this.part) {
+            render(null, this._element);
+        }
     }
 }
